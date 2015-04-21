@@ -411,6 +411,122 @@ public class Login extends JFrame implements ActionListener{
 					new Toast(new ImageIcon(".\\res\\error.png"), "邮箱不能为空！").show(forgetPane, emailaddress, 2000);
 					return;
 				}
+				for(int i=380;i>=190;i--){
+					setSize(getWidth(), i);
+				}
+				Graphics g=getGraphics();
+				paintAll(g);
+				g.dispose();
+				JProgressBar progress=new JProgressBar();
+				progress.setBounds(117, 140, 1, 17);
+				getLayeredPane().setLayer(progress, JLayeredPane.getLayer(lbl)+1);
+				getLayeredPane().add(progress);
+				progress.setString("正在连接服务器");
+				for(int i=1;i<=200;i++){
+					progress.setSize(i, progress.getHeight());
+					try {
+						Thread.sleep(2);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
+					Graphics g1=progress.getGraphics();
+					progress.paintAll(g1);
+					g1.dispose();
+				}
+				progress.setStringPainted(true);
+				progress.setIndeterminate(true);
+				
+				Thread thread=new Thread(){
+
+					@Override
+					public void run() {
+						try {
+							if(Client.forgotPassword(Integer.parseInt(idEmail.getText()), emailaddress.getText())){
+								progress.setString("已发送邮件");
+								progress.setIndeterminate(false);
+								try {
+									Thread.sleep(1000);
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+								progress.setStringPainted(false);
+								progress.setIndeterminate(false);
+								for(int i=200;i>=0;i--){
+									progress.setSize(i, progress.getHeight());
+									Graphics g1=progress.getGraphics();
+									progress.paintAll(g1);
+									g1.dispose();
+								}
+								progress.setVisible(false);
+								forgetPane.setSize(forgetPane.getWidth(), 0);
+								for(int i=190;i<=380;i++){
+									setSize(getWidth(), i);
+									Graphics g=getGraphics();
+									paintAll(g);
+									g.dispose();
+								}
+								loginPane.setVisible(true);
+							}else{
+								progress.setStringPainted(false);
+								progress.setIndeterminate(false);
+								for(int i=200;i>=0;i--){
+									progress.setSize(i, progress.getHeight());
+									Graphics g1=progress.getGraphics();
+									progress.paintAll(g1);
+									g1.dispose();
+								}
+								progress.setVisible(false);
+								for(int i=190;i<=380;i++){
+									setSize(getWidth(), i);
+								}
+								Graphics g=getGraphics();
+								paintAll(g);
+								g.dispose();
+								new Toast(new ImageIcon(".\\res\\error.png"), "邮箱错误").show(forgetPane, emailaddress, 2000);
+							}
+							cbtn.setDefaultAction();
+						} catch (IOException e) {
+							progress.setString("无法连接到服务器！");
+							progress.setIndeterminate(false);
+							e.printStackTrace();
+						}
+					}
+				};
+				
+				cbtn.setActionListener(new ActionListener() {
+					
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						progress.setStringPainted(false);
+						progress.setIndeterminate(false);
+						for(int i=200;i>=0;i--){
+							progress.setSize(i, progress.getHeight());
+							try {
+								Thread.sleep(2);
+							} catch (InterruptedException e1) {
+								e1.printStackTrace();
+							}
+							if(i%2==0){
+								Graphics g1=progress.getGraphics();
+								progress.paintAll(g1);
+								g1.dispose();
+							}
+						}
+						progress.setVisible(false);
+						for(int i=190;i<=380;i++){
+							setSize(getWidth(), i);
+							if(i%2==0){
+								Graphics g=getGraphics();
+								paintAll(g);
+								g.dispose();
+							}
+						}
+						thread.interrupt();
+						cbtn.setDefaultAction();
+					}
+				});
+
+				thread.start();
 			}
 		});
 		
@@ -1036,7 +1152,6 @@ public class Login extends JFrame implements ActionListener{
 					Client.startService();
 					User user=Client.getUser(Integer.parseInt(id.getText()));
 					user.setIp(InetAddress.getLocalHost().getHostAddress());
-					Client.editUser(user);
 					FileOperator.setId(Integer.parseInt(id.getText()));
 					if(cbx.isSelected()){
 						char[] p=passwordField.getPassword();

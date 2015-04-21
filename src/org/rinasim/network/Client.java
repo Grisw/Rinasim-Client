@@ -2,6 +2,11 @@ package org.rinasim.network;
 
 import java.awt.Graphics;
 import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -12,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.JProgressBar;
 import javax.swing.text.StyledDocument;
 
 import org.rinasim.frame.ClientUI;
@@ -32,11 +38,6 @@ import org.rinasim.widget.FriendPanel;
  * @since v1.0
  */
 public class Client extends Thread{
-	
-	/**
-	 * 聊天记录列表
-	 */
-	public static Map<Integer, List<Message>> msgMap=new HashMap<Integer, List<Message>>();
 	
 	/**
 	 * 当前客户监听线程
@@ -87,7 +88,7 @@ public class Client extends Thread{
 	
 	/**
 	 *  写入信息
-	 * @param str 写入的信息
+	 * @param doc 写入的信息
 	 * @param id 对方ID
 	 * @throws IOException 
 	 */
@@ -96,13 +97,22 @@ public class Client extends Thread{
 		writer.writeInt(id);
 		writer.writeObject(new Message(doc, Time.getDate(), Message.FROM));
 		writer.flush();
-		if(msgMap.containsKey(id)){
-			msgMap.get(id).add(new Message(doc, Time.getDate(), Message.TO));
-		}else{
-			List<Message> l=new ArrayList<Message>();
-			l.add(new Message(doc, Time.getDate(), Message.TO));
-			msgMap.put(id, l);
-		}
+	}
+	
+	/**
+	 * 写入信息
+	 * @param msg 信息
+	 * @param id 对方ID
+	 * @throws IOException 
+	 */
+	public static synchronized void writeMsg(Message msg,int id) throws IOException{
+		writer.writeInt(Identifier.MSG);
+		writer.writeInt(id);
+		if(msg.isFile())
+			writer.writeObject(new Message(msg.getFileName(), msg.getFileLength(), Time.getDate(), Message.FROM));
+		else
+			writer.writeObject(new Message(msg.getMessage(), Time.getDate(), Message.FROM));
+		writer.flush();
 	}
 
 	/**
@@ -121,13 +131,6 @@ public class Client extends Thread{
 						if(getFrdName(id)!=null){
 							ClientUI.current.setHasMsg(true, id);
 							ClientUI.current.addMessage(msg, id);
-							if(msgMap.containsKey(id)){
-								msgMap.get(id).add(msg);
-							}else{
-								List<Message> l=new ArrayList<Message>();
-								l.add(msg);
-								msgMap.put(id, l);
-							}
 						}
 					} catch (ClassNotFoundException e) {
 						e.printStackTrace();
@@ -157,7 +160,7 @@ public class Client extends Thread{
 					try {
 						panelReturned=(List<FriendPanel>) reader.readObject();
 					} catch (ClassNotFoundException e) {
-						panelReturned=null;
+						panelReturned=new ArrayList<FriendPanel>();
 						e.printStackTrace();
 					}
 					isReturned=true;
@@ -176,11 +179,22 @@ public class Client extends Thread{
 					try {
 						booleanMapReturned=(Map<Integer, Boolean>) reader.readObject();
 					} catch (ClassNotFoundException e) {
-						booleanMapReturned=null;
+						booleanMapReturned=new HashMap<Integer, Boolean>();
 						e.printStackTrace();
 					}
 					isReturned=true;
 				}else if(identifier==Identifier.SET_FRIEND_NOTE){
+					booleanReturned=reader.readBoolean();
+					isReturned=true;
+				}else if(identifier==Identifier.GET_RECORD){
+					try {
+						msgReturned=(List<Message>) reader.readObject();
+					} catch (ClassNotFoundException e) {
+						msgReturned=new ArrayList<Message>();
+						e.printStackTrace();
+					}
+					isReturned=true;
+				}else if(identifier==Identifier.CLEAR_RECORD){
 					booleanReturned=reader.readBoolean();
 					isReturned=true;
 				}
@@ -436,15 +450,6 @@ public class Client extends Thread{
 			while(isReturned==false){
 				Thread.sleep(10);
 			}
-			if(msgReturned!=null){
-				if(msgMap.containsKey(frdId)){
-					msgMap.get(frdId).addAll(msgReturned);
-				}else{
-					List<Message> l=new ArrayList<Message>();
-					l.addAll(msgReturned);
-					msgMap.put(frdId, l);
-				}
-			}
 			return msgReturned;
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -533,9 +538,220 @@ public class Client extends Thread{
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} finally {
-			broadReturned=null;
-			timeReturned=null;
+			isReturned=false;
 		}
 		return "Unknown";
+	}
+	
+	/**
+	 * 找回密码	
+	 * @author 刘旭涛
+	 * @date 2015年4月18日 下午12:43:02
+	 * @since v1.0
+	 * @param id
+	 * @param email
+	 * @return
+	 * @throws UnknownHostException
+	 * @throws IOException
+	 */
+	public synchronized static boolean forgotPassword(int id, String email) throws UnknownHostException, IOException{
+		Socket tmp=null;
+		ObjectOutputStream twriter=null;
+		try {
+			tmp=new Socket(FileOperator.getServerIp(), FileOperator.getServerPort());
+			twriter=new ObjectOutputStream(tmp.getOutputStream());
+			twriter.writeInt(Identifier.FORGOT_PASSWORD);
+			twriter.writeInt(id);
+			twriter.writeUTF(email);
+			twriter.flush();
+			return new ObjectInputStream(tmp.getInputStream()).readBoolean();
+		} finally {
+			if(tmp!=null)
+				try {
+					tmp.close();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			if(twriter!=null)
+				try {
+					twriter.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+		}
+	}
+	
+	/**
+	 * 上传文件
+	 * @author 刘旭涛
+	 * @date 2015年4月21日 上午10:42:40
+	 * @since v1.0
+	 * @param file
+	 * @param pro
+	 * @return
+	 * @throws IOException
+	 */
+	public synchronized static boolean uploadFile(File file, JProgressBar pro) throws IOException{
+		if(!file.isFile())
+			return false;
+		Socket tmp=new Socket(FileOperator.getServerIp(), FileOperator.getServerPort()+100);
+		
+		ObjectOutputStream cmdWriter=new ObjectOutputStream(tmp.getOutputStream());
+		cmdWriter.writeInt(Identifier.UPLOAD_FILE);
+		cmdWriter.writeUTF(file.getAbsolutePath().substring(file.getAbsolutePath().lastIndexOf("\\")+1));
+		cmdWriter.writeInt((int) file.length());
+		cmdWriter.flush();
+
+		DataOutputStream fileWriter=new DataOutputStream(cmdWriter);
+		FileInputStream fis=new FileInputStream(file);
+		try {
+			byte[] buffer=new byte[1024];
+			while (true) {
+                int len = 0;
+                if (fis != null) {
+                    len = fis.read(buffer);
+                }
+                if (len == -1) {
+                    break;
+                }
+                fileWriter.write(buffer);
+                fileWriter.flush();
+                if(pro!=null&&pro.isVisible())
+                	pro.setValue(pro.getValue()+len);
+            }
+			return true;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		} finally {
+			try {
+				if(fis!=null)
+					fis.close();
+				if(fileWriter!=null)
+					fileWriter.close();
+				if(tmp!=null)
+					tmp.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	/**
+	 * 下载文件
+	 * @author 刘旭涛
+	 * @date 2015年4月21日 上午11:16:43
+	 * @since v1.0
+	 * @param dir
+	 * @param name
+	 * @param length
+	 * @param pro
+	 * @return
+	 * @throws IOException
+	 */
+	public synchronized static boolean downloadFile(File dir, String name, int length, JProgressBar pro) throws IOException{
+		if(!dir.isDirectory()){
+			dir.mkdirs();
+		}
+		File file=new File(dir, name);
+		if(!file.isFile()){
+			file.createNewFile();
+		}else{
+			file.delete();
+			file.createNewFile();
+		}
+		
+		Socket tmp=new Socket(FileOperator.getServerIp(), FileOperator.getServerPort()+100);
+		
+		ObjectOutputStream cmdWriter=new ObjectOutputStream(tmp.getOutputStream());
+		cmdWriter.writeInt(Identifier.DOWNLOAD_FILE);
+		cmdWriter.writeUTF(name);
+		cmdWriter.writeInt(length);
+		cmdWriter.flush();
+
+		DataInputStream fileReader=new DataInputStream(tmp.getInputStream());
+		FileOutputStream fos=new FileOutputStream(file);
+		try {
+			byte[] buffer=new byte[1024];
+			while (true) {
+				int len = 0;
+                if (fileReader != null) {
+                    len = fileReader.read(buffer);
+                }
+                if (len == -1) {
+                    break;
+                }
+                fos.write(buffer);
+                if(pro!=null&&pro.isVisible())
+                	pro.setValue(pro.getValue()+len);
+            }
+			return true;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		} finally {
+			try {
+				if(fos!=null)
+					fos.close();
+				if(fileReader!=null)
+					fileReader.close();
+				if(tmp!=null)
+					tmp.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	/**
+	 * 获取聊天记录
+	 * @author 刘旭涛
+	 * @date 2015年4月21日 下午6:41:53
+	 * @since v1.0
+	 * @param frdId
+	 * @return
+	 * @throws IOException
+	 */
+	public synchronized static List<Message> getRecord(int frdId) throws IOException{
+		try {
+			writer.writeInt(Identifier.GET_RECORD);
+			writer.writeInt(frdId);
+			writer.flush();
+			while(isReturned==false){
+				Thread.sleep(10);
+			}
+			return msgReturned;
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} finally {
+			isReturned=false;
+		}
+		return null;
+	}
+	
+	/**
+	 * 清空聊天记录
+	 * @author 刘旭涛
+	 * @date 2015年4月21日 下午6:58:37
+	 * @since v1.0
+	 * @param frdId
+	 * @return
+	 * @throws IOException
+	 */
+	public synchronized static boolean clearRecord(int frdId) throws IOException{
+		try {
+			writer.writeInt(Identifier.CLEAR_RECORD);
+			writer.writeInt(frdId);
+			writer.flush();
+			while(isReturned==false){
+				Thread.sleep(10);
+			}
+			return booleanReturned;
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} finally {
+			isReturned=false;
+		}
+		return false;
 	}
 }

@@ -31,7 +31,10 @@ public class Message implements Serializable{
 
 	private StyledDocument doc;
 	private String time;
+	private int fileLength;
+	private String fileName;
 	private int type;
+	private boolean isFile;
 
 	/**
 	 * 创建消息
@@ -57,6 +60,24 @@ public class Message implements Serializable{
 		this.doc=document;
 		this.time=time;
 		this.type=type;
+		this.isFile=false;
+	}
+	
+	/**
+	 * 创建文件信息
+	 * @date 2015年4月20日 下午9:08:55
+	 * @since v1.0
+	 * @param fileName
+	 * @param fileLength
+	 * @param time
+	 * @param type
+	 */
+	public Message(String fileName, int fileLength, String time, int type){
+		this.fileName=fileName;
+		this.fileLength=fileLength;
+		this.time=time;
+		this.type=type;
+		this.isFile=true;
 	}
 	
 	/**
@@ -83,4 +104,36 @@ public class Message implements Serializable{
 		return type;
 	}
 	
+	/**
+	 * 是否是文件
+	 * @author 刘旭涛
+	 * @date 2015年4月20日 下午9:04:17
+	 * @since v1.0
+	 * @return
+	 */
+	public boolean isFile(){
+		return isFile;
+	}
+	
+	/**
+	 * 获取文件数据
+	 * @author 刘旭涛
+	 * @date 2015年4月20日 下午9:04:47
+	 * @since v1.0
+	 * @return
+	 */
+	public int getFileLength(){
+		return fileLength;
+	}
+	
+	/**
+	 * 获取文件名
+	 * @author 刘旭涛
+	 * @date 2015年4月20日 下午9:07:58
+	 * @since v1.0
+	 * @return
+	 */
+	public String getFileName(){
+		return fileName;
+	}
 }

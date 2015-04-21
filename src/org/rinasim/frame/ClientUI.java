@@ -153,6 +153,7 @@ public class ClientUI extends JFrame {
 		
 		JLabel broad = new JLabel("\u516C\u544A");
 		broad.setForeground(Color.WHITE);
+		broad.setBackground(Color.WHITE);
 		broad.setBorder(new LineBorder(Color.WHITE, 2, false));
 		broad.setHorizontalAlignment(SwingConstants.CENTER);
 		broad.setBounds(-1, 161, 92, 30);
@@ -162,13 +163,13 @@ public class ClientUI extends JFrame {
 
 			@Override
 			public void mousePressed(MouseEvent e) {
-				broad.setBackground(Color.WHITE);
+				broad.setOpaque(true);
 				broad.setForeground(new Color(46, 184, 230));
 			}
 
 			@Override
 			public void mouseReleased(MouseEvent e) {
-				broad.setBackground(new Color(46, 184, 230));
+				broad.setOpaque(false);
 				broad.setForeground(Color.WHITE);
 			}
 			
@@ -185,26 +186,12 @@ public class ClientUI extends JFrame {
 			}
 		});
 		
-		JLabel update = new JLabel("\u68C0\u67E5\u66F4\u65B0");
-		update.setHorizontalAlignment(SwingConstants.CENTER);
-		update.setForeground(Color.WHITE);
-		update.setBorder(new LineBorder(Color.WHITE, 2, false));
-		update.setBounds(89, 161, 92, 30);
-		panel.add(update);
-		
 		JLabel editPassword = new JLabel("\u4FEE\u6539\u5BC6\u7801");
 		editPassword.setHorizontalAlignment(SwingConstants.CENTER);
 		editPassword.setForeground(Color.WHITE);
 		editPassword.setBorder(new LineBorder(Color.WHITE, 2, false));
-		editPassword.setBounds(179, 161, 92, 30);
+		editPassword.setBounds(89, 161, 92, 30);
 		panel.add(editPassword);
-		
-		JLabel option = new JLabel("\u8BBE\u7F6E");
-		option.setHorizontalAlignment(SwingConstants.CENTER);
-		option.setForeground(Color.WHITE);
-		option.setBorder(new LineBorder(Color.WHITE, 2, false));
-		option.setBounds(269, 161, 92, 30);
-		panel.add(option);
 
 		//Ìí¼ÓËÑË÷¿ò
 		search = new JTextField(FileOperator.getID());
@@ -576,9 +563,14 @@ public class ClientUI extends JFrame {
 
 							@Override
 							public void mouseClicked(MouseEvent e) {
-								if(chatPane.get(p.getId())!=null&&chatPane.get(p.getId()).isVisible()){
-									chatPane.get(p.getId()).setState(Frame.NORMAL);
-									chatPane.get(p.getId()).toFront();
+								if(chatPane.get(p.getId())!=null){
+									if(chatPane.get(p.getId()).isVisible()){
+										chatPane.get(p.getId()).setState(Frame.NORMAL);
+										chatPane.get(p.getId()).toFront();
+									}else{
+										chatPane.get(p.getId()).setSize(chatPane.get(p.getId()).getWidth(), 600);
+										chatPane.get(p.getId()).setVisible(true);
+									}
 								}else{
 									Chat c=new Chat(p.getId(), p.getName(), p.getPortrait());
 									chatPane.put(p.getId(),c);

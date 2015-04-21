@@ -41,8 +41,6 @@ import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.event.ChangeListener;
-import javax.swing.event.ChangeEvent;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
@@ -364,6 +362,21 @@ public class UserInfo extends JDialog {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				User user=new User();
+				user.setId(Integer.parseInt(id.getText()));
+				if(!user.setName(name.getText())) {
+					new Toast(new ImageIcon(".\\res\\error.png"), "用户名不能为空！").show(getLayeredPane(), save, 2000);
+					return;
+				}
+				if(!user.setEmail(email.getText())) {
+					new Toast(new ImageIcon(".\\res\\error.png"), "邮箱地址格式错误！").show(getLayeredPane(), save, 2000);
+					return;
+				}
+				if(!user.setAddress(address.getText())) {
+					new Toast(new ImageIcon(".\\res\\error.png"), "地址不大于50字！").show(getLayeredPane(), save, 2000);
+					return;
+				}
+				
 				for(int i=1;i<=160;i++){
 					progressBar.setSize(i, progressBar.getHeight());
 				}
@@ -376,9 +389,6 @@ public class UserInfo extends JDialog {
 					@Override
 					public void run() {
 						save.setEnabled(false);
-						User user=new User();
-						user.setId(Integer.parseInt(id.getText()));
-						user.setAddress(address.getText());
 						user.setAge((int) age.getValue());
 						Calendar cal=Calendar.getInstance();
 //						cal.set((int)year.getValue(), (int)month.getValue(), (int)day.getValue());
@@ -391,8 +401,7 @@ public class UserInfo extends JDialog {
 						user.setOccupation(occupation.getText());
 						user.setPortrait((ImageIcon) portrait.getIcon());
 						user.setSchool(school.getText());
-						System.out.println(buttonGroup.getSelection().getActionCommand());
-//						user.setSex(buttonGroup.getSelection().getActionCommand());
+						user.setSex(male.isSelected()?male.getText():(female.isSelected()?female.getText():secrect.getText()));
 						try {
 							if(Client.editUser(user)){
 								progressBar.setIndeterminate(false);

@@ -3,7 +3,7 @@ package org.rinasim.util;
 /**
  * 信息标识符
  * @author 刘旭涛
- * @date 2015年3月17日 上午10:08:26
+ * @date 2015年3月15日 下午8:33:14
  * @since v1.0
  */
 public interface Identifier {
@@ -69,17 +69,17 @@ public interface Identifier {
 	public static final int DELETE_FRIEND=10;
 	
 	/**
-	 * 推送更新
-	 * 格式：PUSH_UPDATE->int length->String time->String version
+	 * 获取聊天记录
+	 * 格式：GET_RECORD->int frdId
 	 */
-	public static final int PUSH_UPDATE=11;
-	
-	/**
-	 * 请求更新
-	 * 格式：UPDATE->int length->String name->byte[] data
-	 */
-	public static final int UPDATE=12;
+	public static final int GET_RECORD=11;
 
+	/**
+	 * 清空聊天记录
+	 * 格式：CLEAR_RECORD->int frdId
+	 */
+	public static final int CLEAR_RECORD=12;
+	
 	/**
 	 * 离线消息
 	 * 格式：OFFLINE_MESSAGE->int frdId
@@ -104,4 +104,21 @@ public interface Identifier {
 	 */
 	public static final int READ_MESSAGE=16;
 
+	/**
+	 * 忘记密码
+	 * 格式：FORGOT_PASSWORD->int id->String email
+	 */
+	public static final int FORGOT_PASSWORD=17;
+	
+	/**
+	 * 上传文件
+	 * 格式：UPLOAD_FILE->String name->int length->byte[] data
+	 */
+	public static final int UPLOAD_FILE=18;
+	
+	/**
+	 * 下载文件
+	 * 格式：DOWNLOAD_FILE->String name->int length
+	 */
+	public static final int DOWNLOAD_FILE=19;
 }

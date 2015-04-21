@@ -11,6 +11,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
@@ -25,6 +26,7 @@ import javax.swing.Timer;
 import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
+
 import org.rinasim.network.Client;
 import org.rinasim.object.Message;
 import org.rinasim.util.Time;
@@ -62,6 +64,7 @@ public class Chat extends JFrame{
 	private JTextPane textPane;
 	private JPanel msgPane;
 	private JScrollPane scrollPane;
+	private EmojiPanel ep;
 	
 	private int id;
 
@@ -93,11 +96,53 @@ public class Chat extends JFrame{
 		cbtn.setBounds(642, 0, 58, 25);
 		panel.add(cbtn);
 		
+		cbtn.setActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				for(int i=getHeight();i>=0;i--){
+					setSize(getWidth(), i);
+				}
+				setVisible(false);
+			}
+		});
+		
 		MinimizeButton mbtn = new MinimizeButton(this);
 		mbtn.setBounds(608, 0, 34, 25);
 		panel.add(mbtn);
 		
 		JLabel head = new JLabel(portrait);
+		head.addMouseListener(new MouseAdapter() {
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				head.setBorder(new LineBorder(new Color(240, 240, 240), 2, true));
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				head.setBorder(new LineBorder(Color.WHITE, 2, true));
+			}
+			
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if(ep!=null&&ep.isShowing()){
+					ep.setVisible(false);
+				}
+				try {
+					FriendInfo frame = new FriendInfo(Client.getUser(id), false);
+					frame.setVisible(true);
+					for(int i=0;i<=520;i+=2){
+						frame.setSize(frame.getWidth(), i);
+					}
+					Graphics g=frame.getGraphics();
+					frame.paintAll(g);
+					g.dispose();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
 		head.setBorder(new LineBorder(Color.WHITE, 2, true));
 		head.setBounds(40, 40, 72, 72);
 		panel.add(head);
@@ -123,6 +168,7 @@ public class Chat extends JFrame{
 		msgPane = new JPanel();
 		msgPane.setBackground(Color.WHITE);
 		scrollPane.setViewportView(msgPane);
+		msgPane.setSize(new Dimension(scrollPane.getWidth()-scrollPane.getVerticalScrollBar().getWidth(), currentHeight));
 		msgPane.setLayout(null);
 		
 		Button send = new Button("发送");
@@ -130,30 +176,6 @@ public class Chat extends JFrame{
 		getContentPane().add(send);
 		
 		Button emoji = new Button("\u53D1\u9001");
-		
-		emoji.addActionListener(new ActionListener() {
-			
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				EmojiPanel ep=new EmojiPanel();
-				ep.setBounds(emoji.getX(), emoji.getY()-10-350, 350, 350);
-				getLayeredPane().add(ep);
-				getLayeredPane().setLayer(ep, getLayeredPane().highestLayer()+1);
-				addMouseListener(new MouseAdapter() {
-
-					@Override
-					public void mouseClicked(MouseEvent e) {
-						if(!ep.contains(e.getPoint())){
-							getLayeredPane().remove(ep);
-							Graphics g=getLayeredPane().getGraphics();
-							getLayeredPane().paintAll(g);
-							g.dispose();
-							getLayeredPane().removeMouseListener(this);
-						}
-					}
-				});
-			}
-		});
 		emoji.setText("\u8868\u60C5");
 		emoji.setBounds(24, 476, 91, 24);
 		getContentPane().add(emoji);
@@ -163,6 +185,9 @@ public class Chat extends JFrame{
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				if(ep!=null&&ep.isShowing()){
+					ep.setVisible(false);
+				}
 				JFileChooser chooser=new JFileChooser();
 				chooser.setDialogTitle("选择图片");
 				chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
@@ -218,6 +243,18 @@ public class Chat extends JFrame{
 		});
 		scrollPane_1.setViewportView(textPane);
 		
+		Button button = new Button("\u53D1\u9001");
+		button.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new Record(id, note, portrait).setVisible(true);
+			}
+		});
+		button.setText("\u8BB0\u5F55");
+		button.setBounds(339, 476, 91, 24);
+		getContentPane().add(button);
+		
 		//窗口移动
 		panel.addMouseListener(new MouseAdapter() {
 			
@@ -235,40 +272,105 @@ public class Chat extends JFrame{
 			}
 		});
 		
-		//初始化消息
-		addOfflineMessage();
-		send.addActionListener(new ActionListener() {
+		//表情
+		emoji.addActionListener(new ActionListener() {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				sendMessage();
+				ep=new EmojiPanel();
+				ep.setBounds(emoji.getX(), emoji.getY()-10-350, 350, 350);
+				getLayeredPane().add(ep);
+				getLayeredPane().setLayer(ep, getLayeredPane().highestLayer()+1);
+				MouseListener l=new MouseAdapter() {
+
+					@Override
+					public void mouseClicked(MouseEvent e) {
+						if(!ep.contains(e.getPoint())){
+							getLayeredPane().remove(ep);
+							Graphics g=getLayeredPane().getGraphics();
+							getLayeredPane().paintAll(g);
+							g.dispose();
+							removeMouseListener(this);
+							scrollPane.removeMouseListener(this);
+							panel.removeMouseListener(this);
+						}
+					}
+				};
+				addMouseListener(l);
+				scrollPane.addMouseListener(l);
+				panel.addMouseListener(l);
 			}
 		});
-	}
-	
-	/**
-	 * 添加离线消息
-	 * @author 刘旭涛
-	 * @date 2015年4月16日 上午9:21:04
-	 * @since v1.0
-	 */
-	private void addOfflineMessage() {
+		
+		//初始化消息
 		try {
-			List<Message> offlineMsg=Client.getOfflineMessage(id);
+			List<Message> offlineMsg = Client.getOfflineMessage(id);
 			if(offlineMsg!=null){
 				for(Message m:offlineMsg){
 					addMessage(m);
 				}
-			}else{
-				if(Client.msgMap.get(id)!=null){
-					for(Message m:Client.msgMap.get(id)){
-						addMessage(m);
-					}
+			}
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		
+		send.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(ep!=null&&ep.isShowing()){
+					ep.setVisible(false);
+				}
+				sendMessage();
+			}
+		});
+		file.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(ep!=null&&ep.isShowing()){
+					ep.setVisible(false);
+				}
+				JFileChooser chooser=new JFileChooser();
+				chooser.setDialogTitle("选择文件");
+				chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+				chooser.setMultiSelectionEnabled(false);
+				if(chooser.showOpenDialog(Chat.this)==JFileChooser.APPROVE_OPTION){
+					File file=chooser.getSelectedFile();
+					Message msg=new Message(file.getAbsolutePath().substring(file.getAbsolutePath().lastIndexOf("\\")+1), (int) file.length(), Time.getDate(), Message.TO);
+					MessageAdapter ad=addMessage(msg);
+					ad.showProgressBar(true);
+					new Thread(){
+						
+						@Override
+						public void run() {
+							try {
+								if(Client.uploadFile(file, ad.getProgressBar())){
+									ad.getProgressBar().setString("上传成功");
+									try {
+										Thread.sleep(1000);
+									} catch (InterruptedException e) {
+										e.printStackTrace();
+									}
+									ad.showProgressBar(false);
+									Client.writeMsg(msg, id);
+								}else{
+									ad.getProgressBar().setString("上传失败");
+									try {
+										Thread.sleep(1000);
+									} catch (InterruptedException e) {
+										e.printStackTrace();
+									}
+									ad.showProgressBar(false);
+								}
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+					}.start();
 				}
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		});
 	}
 
 	private int currentHeight=10;
@@ -280,7 +382,7 @@ public class Chat extends JFrame{
 	 * @since v1.0
 	 * @param msg
 	 */
-	public void addMessage(Message msg){
+	public MessageAdapter addMessage(Message msg){
 		MessageAdapter adapter=new MessageAdapter(msg);
 		if(msg.getType()==Message.TO){
 			adapter.setLocation(msgPane.getWidth()-adapter.getWidth()-5, currentHeight);
@@ -288,22 +390,22 @@ public class Chat extends JFrame{
 			adapter.setLocation(0, currentHeight);
 		}
 		currentHeight+=adapter.getHeight()+10;
-		msgPane.add(adapter);
 		
 		msgPane.setPreferredSize(new Dimension(scrollPane.getWidth()-scrollPane.getVerticalScrollBar().getWidth(), currentHeight));
 		
+		msgPane.add(adapter);
+		
 		Graphics graphics=scrollPane.getGraphics();
-		if(graphics!=null){
-			scrollPane.paintAll(graphics);
+		scrollPane.paintAll(graphics);
+		if(graphics!=null)
 			graphics.dispose();
-			JScrollBar bar=scrollPane.getVerticalScrollBar();
-			bar.setValue(bar.getMaximum());
-		}
+		JScrollBar bar=scrollPane.getVerticalScrollBar();
+		bar.setValue(bar.getMaximum());
 		graphics=scrollPane.getGraphics();
-		if(graphics!=null){
-			scrollPane.paintAll(graphics);
+		scrollPane.paintAll(graphics);
+		if(graphics!=null)
 			graphics.dispose();
-		}
+		return adapter;
 	}
 
 	/**
@@ -446,5 +548,4 @@ public class Chat extends JFrame{
 			add(l);
 		}
 	}
-	
 }
